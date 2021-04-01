@@ -1,4 +1,4 @@
-package com.huaying;
+package com.hytech.spring;
 
 import static org.junit.Assert.assertTrue;
 
