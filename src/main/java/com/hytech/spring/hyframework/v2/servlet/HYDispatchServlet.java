@@ -1,6 +1,7 @@
 package com.hytech.spring.hyframework.v2.servlet;
 
 import com.hytech.spring.hyframework.annotation.*;
+import com.hytech.spring.hyframework.util.StrUtil;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -16,6 +17,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
@@ -33,10 +35,10 @@ public class HYDispatchServlet extends HttpServlet {
     private final List<String> classNames = new ArrayList<>();
 
     // ioc容器，key:默认类名首字母小写; value:对应实例对象
-    private final Map<String, Object> ioc = new HashMap<>();
+    private final Map<String, Object> ioc = new ConcurrentHashMap<>();
 
     // 开放访问的接口 key:url;value:method
-    private final Map<String, Method> handlerMapping = new HashMap<>();
+    private final Map<String, Method> handlerMapping = new ConcurrentHashMap<>();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -59,7 +61,7 @@ public class HYDispatchServlet extends HttpServlet {
         // 1.加载配置文件
         loadConfiguration(config.getInitParameter(propertiesParmaName));
 
-        // 2.扫描相关的类
+        // 2.扫描base-package下所有的类
         doScanner(properties.getProperty("base-package"));
 
         // 3.初始化ioc容器，将扫描到的相关类实例化，保存到ioc容器   (IoC部分)
@@ -82,7 +84,7 @@ public class HYDispatchServlet extends HttpServlet {
             properties.load(is);
         } catch (IOException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             if (is != null) {
                 try {
                     is.close();
@@ -114,9 +116,10 @@ public class HYDispatchServlet extends HttpServlet {
         if (classNames.isEmpty()) {
             return;
         }
+        try {
 
-        for (String className : classNames) {
-            try {
+            for (String className : classNames) {
+
                 Class<?> cla = Class.forName(className);
                 if (!cla.isAnnotationPresent(HYController.class) && !cla.isAnnotationPresent(HYService.class)) {
                     continue;
@@ -125,20 +128,18 @@ public class HYDispatchServlet extends HttpServlet {
                 String key = "";
 
                 if (cla.isAnnotationPresent(HYController.class)) {
-                    key = lowerCaseFist(cla.getSimpleName());
+                    key = StrUtil.lowerCaseFist(cla.getSimpleName());
 
                 } else if (cla.isAnnotationPresent(HYService.class)) {
                     // 1.默认首字母小写
                     // 2.在多个包出现相同类名，只能自定义全局唯一名字
                     // 3.如果接口多实现，只能抛异常
-
-
                     HYService service = cla.getAnnotation(HYService.class);
                     String value = service.value();
                     if (value.isEmpty()) {
-                        key = lowerCaseFist(cla.getSimpleName());
+                        key = StrUtil.lowerCaseFist(cla.getSimpleName());
                     } else {
-                        key = lowerCaseFist(value);
+                        key = StrUtil.lowerCaseFist(value);
                     }
 
                     for (Class<?> anInterface : cla.getInterfaces()) {
@@ -147,32 +148,17 @@ public class HYDispatchServlet extends HttpServlet {
                             throw new Exception("The " + name + "is exist");
                         }
                     }
-
-
                 }
-
                 ioc.put(key, cla.newInstance());
-
-            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-                e.printStackTrace();
-            } catch (Exception e) {
-                e.printStackTrace();
             }
 
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-    }
 
-    /**
-     * 只能将首字母大写的转成首字符小写，如果是小写会出错
-     *
-     * @param str string
-     * @return String
-     */
-    private String lowerCaseFist(String str) {
-        char[] chars = str.toCharArray();
-        chars[0] += 32;
-        return String.valueOf(chars);
     }
 
     private void doAutowired() {
@@ -286,7 +272,7 @@ public class HYDispatchServlet extends HttpServlet {
             }
         }
 
-        Object invoke = method.invoke(ioc.get(lowerCaseFist(beanName)), paramsValue);
+        Object invoke = method.invoke(ioc.get(StrUtil.lowerCaseFist(beanName)), paramsValue);
         res.getWriter().write(String.valueOf(invoke));
     }
 

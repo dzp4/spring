@@ -6,7 +6,7 @@ import java.lang.annotation.*;
  * @author dzp 2021/3/31
  */
 @Documented
-@Target(ElementType.TYPE)
+@Target({ElementType.METHOD,ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface HYAutoWired {
 
