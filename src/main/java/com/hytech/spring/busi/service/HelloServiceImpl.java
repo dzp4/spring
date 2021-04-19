@@ -1,4 +1,4 @@
-package com.hytech.spring.hyframework.service;
+package com.hytech.spring.busi.service;
 
 import com.hytech.spring.hyframework.annotation.HYService;
 

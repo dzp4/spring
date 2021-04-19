@@ -28,4 +28,8 @@ public class StrUtil {
         return str == null || str.isEmpty();
     }
 
+
+    public static String makeStringForRegexp(String str) {
+        return str;
+    }
 }
